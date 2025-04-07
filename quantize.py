@@ -23,9 +23,11 @@ def quantize_onnx_model(
         quant_format = quant_format,
     )
 
-    quantization.fit(
+    q_model = quantization.fit(
         model=modelpath,
         conf=config,
         calib_dataloader=tuple_dloader,
         accuracy_criterion=accuracy_criterion,
     )
+
+    return q_model
