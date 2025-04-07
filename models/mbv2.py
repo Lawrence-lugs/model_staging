@@ -70,8 +70,13 @@ class MobileNetV2( nn.Module ):
     """
     CIDR Implementation of MBV2
     """
-    def __init__(self, num_classes=10, width_mult=1.0):
+    def __init__(self, num_classes=10, width_mult=1.0, input_width=224):
         super(MobileNetV2, self).__init__()
+
+        midstride = 2
+        if input_width < 112:
+            midstride = 1
+
         block = InvertedResidual
         input_channel = 32
         last_channel = 1280
@@ -80,12 +85,19 @@ class MobileNetV2( nn.Module ):
             [1, 16, 1, 1],
             [6, 24, 2, 1],
             [6, 32, 3, 2],
-            [6, 64, 4, 1], # Changed for CIFAR10
+            [6, 64, 4, midstride], # Changed for CIFAR10
             [6, 96, 3, 1],
             [6, 160, 3, 2],
             [6, 320, 1, 1],
         ]
         
+        # Get width and height of last channel
+        w = input_width // 2 # First layer is double strided
+        for setting in block_setting:
+            w = w // (setting[3]) 
+            print(f'bs: {setting} \t w: {w}')
+        self.final_width = w
+
         # first layer
         input_channel = int(input_channel * width_mult)
         features = [ConvBNRelu6(3, input_channel, stride=2)]
@@ -105,6 +117,9 @@ class MobileNetV2( nn.Module ):
         
         self.features = nn.Sequential(*features)
 
+        self.pooler = nn.AvgPool2d(self.final_width,self.final_width)
+        # self.pooler = nn.AdaptiveAvgPool2d(1)
+
         self.projector = nn.Sequential(
             nn.Dropout(0.25),
             nn.Linear(self.last_channel, num_classes)
@@ -112,7 +127,7 @@ class MobileNetV2( nn.Module ):
 
     def forward(self,x):
         x = self.features(x)
-        # what'stride the point of taking this mean?
-        x = x.mean(-1).mean(-1)
+        # Global Average Pool
+        x = self.pooler(x).squeeze()
         x = self.projector(x)
         return x
