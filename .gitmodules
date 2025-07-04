@@ -1,0 +1,3 @@
+[submodule "CIDR_MLPerfTinyTorch"]
+	path = CIDR_MLPerfTinyTorch
+	url = git@github.com:Lawrence-lugs/CIDR_MLPerfTinyTorch.git
